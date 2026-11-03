@@ -19,17 +19,25 @@ def read_root():
             h2 { color: #1e293b; margin-bottom: 30px; font-weight: 600; }
             input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f8fafc; }
             input:focus { border-color: #3b82f6; outline: none; background-color: white; }
-            button { width: 100%; padding: 14px; background-color: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 10px; }
+            button { width: 100%; padding: 14px; background-color: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 10px; transition: 0.3s;}
             button:hover { background-color: #1d4ed8; }
             button:disabled { background-color: #94a3b8; cursor: not-allowed; }
             
             /* Admin Panel uslublari */
             #dashboard { display: none; width: 800px; text-align: left; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-            .status { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #fef08a; color: #854d0e; }
-            .btn-approve { background-color: #22c55e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; width: auto; margin: 0; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;}
+            .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+            
+            .status { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block;}
+            .status-pending { background: #fef08a; color: #854d0e; }
+            .status-approved { background: #dcfce7; color: #166534; }
+            .status-rejected { background: #fee2e2; color: #991b1b; }
+
+            .btn-approve { background-color: #22c55e; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; width: auto; margin: 0 5px 0 0; font-size: 14px;}
             .btn-approve:hover { background-color: #16a34a; }
+            .btn-reject { background-color: #ef4444; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; width: auto; margin: 0; font-size: 14px;}
+            .btn-reject:hover { background-color: #dc2626; }
             .logout-btn { background-color: #fee2e2; color: #dc2626; border: 1px solid #fecaca; width: auto; padding: 10px 20px; margin: 0;}
         </style>
     </head>
@@ -51,12 +59,13 @@ def read_root():
             </div>
             
             <div id="requestsList">
-                <!-- Bu yerga API dan kelgan so'rovlar chiqadi -->
                 <p style="text-align: center; color: #64748b;">Yuklanmoqda...</p>
             </div>
         </div>
 
         <script>
+            let authToken = null;
+
             async function login() {
                 const phone = document.getElementById('phone').value;
                 const password = document.getElementById('password').value;
@@ -83,10 +92,10 @@ def read_root():
                     
                     if (response.ok) {
                         msg.textContent = "";
+                        authToken = data.access_token;
                         document.getElementById('loginPage').style.display = 'none';
                         document.getElementById('dashboard').style.display = 'block';
-                        // So'rovlarni yuklash funksiyasini chaqiramiz
-                        loadRequests();
+                        loadRequests(); // Haqiqiy ma'lumotlarni yuklash
                     } else {
                         msg.textContent = data.detail || "Xatolik yuz berdi";
                     }
@@ -100,26 +109,72 @@ def read_root():
             async function loadRequests() {
                 const list = document.getElementById('requestsList');
                 try {
-                    // API dan shartnomalar ro'yxatini olish (keyinchalik yozamiz)
-                    // Hozircha test uchun statik ma'lumot chiqaramiz
-                    list.innerHTML = `
-                        <div class="card">
-                            <div>
-                                <h4 style="margin: 0 0 5px 0;">Firma: ABC MChJ</h4>
-                                <small style="color: #64748b;">Agent: Ali Valiyev | Sana: 03.11.2026</small>
+                    // API'dan haqiqiy foydalanuvchilar ro'yxatini olish
+                    const response = await fetch('https://buxgalteriya-api.onrender.com/admin/users', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (!response.ok) throw new Error("Ma'lumot yuklanmadi");
+                    
+                    const users = await response.json();
+                    
+                    if (users.length === 0) {
+                        list.innerHTML = `<p style="text-align: center; color: #64748b;">Hozircha so'rovlar yo'q</p>`;
+                        return;
+                    }
+
+                    let html = "";
+                    for (let u of users) {
+                        let statusText = u.status === 'pending' ? 'Kutilmoqda' : (u.status === 'approved' ? 'Tasdiqlangan' : 'Rad etilgan');
+                        let statusClass = u.status === 'pending' ? 'status-pending' : (u.status === 'approved' ? 'status-approved' : 'status-rejected');
+                        
+                        let buttons = "";
+                        if (u.status === 'pending') {
+                            buttons = `
+                                <button class="btn-approve" onclick="changeStatus(${u.id}, 'approve')">Tasdiqlash</button>
+                                <button class="btn-reject" onclick="changeStatus(${u.id}, 'reject')">Rad etish</button>
+                            `;
+                        }
+
+                        html += `
+                            <div class="card">
+                                <div>
+                                    <h4 style="margin: 0 0 5px 0;">${u.first_name} ${u.last_name} (${u.company})</h4>
+                                    <small style="color: #64748b;">Telefon: ${u.phone} | Sana: ${u.created_at}</small>
+                                </div>
+                                <div>
+                                    <span class="status ${statusClass}">${statusText}</span>
+                                    ${buttons}
+                                </div>
                             </div>
-                            <div>
-                                <span class="status">Kutilmoqda</span>
-                                <button class="btn-approve">Tasdiqlash</button>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    }
+                    list.innerHTML = html;
+
                 } catch (error) {
-                    list.innerHTML = `<p style="color: red;">Xatolik yuz berdi</p>`;
+                    list.innerHTML = `<p style="color: red; text-align: center;">Xatolik yuz berdi: ${error.message}</p>`;
+                }
+            }
+
+            async function changeStatus(userId, action) {
+                try {
+                    const response = await fetch(`https://buxgalteriya-api.onrender.com/admin/users/${userId}/${action}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (response.ok) {
+                        loadRequests(); // Ro'yxatni yangilash
+                    } else {
+                        alert("Xatolik yuz berdi");
+                    }
+                } catch (error) {
+                    alert("Serverga ulanib bo'lmadi");
                 }
             }
 
             function logout() {
+                authToken = null;
                 document.getElementById('dashboard').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'block';
                 document.getElementById('phone').value = '';
