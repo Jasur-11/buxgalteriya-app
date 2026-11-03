@@ -1,5 +1,4 @@
-flet==1.0.5
-flet-web==1.0.5
+flet[web]==1.0.5
 fastapi==0.115.0
 uvicorn==0.30.6
 httpx==0.28.1
