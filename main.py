@@ -20,16 +20,31 @@ def read_root():
             button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
             button:hover { background-color: #0056b3; }
             button:disabled { background-color: #cccccc; cursor: not-allowed; }
+            
+            /* Dashboard uslublari */
+            #dashboard { display: none; }
+            .menu-btn { background-color: #28a745; margin-bottom: 15px; }
+            .menu-btn:hover { background-color: #218838; }
         </style>
     </head>
     <body>
-        <div class="container">
+        <!-- Kirish oynasi -->
+        <div class="container" id="loginPage">
             <h2>Tizimga kirish</h2>
             <input type="text" id="phone" placeholder="Telefon raqam (+998...)">
             <input type="password" id="password" placeholder="Parol">
             <button id="loginBtn" onclick="login()">Kirish</button>
             <p id="message" style="color: red;"></p>
         </div>
+
+        <!-- Asosiy sahifa (Dashboard) -->
+        <div class="container" id="dashboard">
+            <h2>Asosiy Menyu</h2>
+            <button class="menu-btn" onclick="alert('Shartnoma yaratish sahifasi tez kunda!')">📄 Shartnoma yaratish</button>
+            <button class="menu-btn" onclick="alert('Spetsifikatsiya yaratish sahifasi tez kunda!')">📊 Spetsifikatsiya yaratish</button>
+            <button style="background-color: #dc3545;" onclick="logout()">Chiqish</button>
+        </div>
+
         <script>
             async function login() {
                 const phone = document.getElementById('phone').value;
@@ -47,7 +62,6 @@ def read_root():
                 msg.style.color = "blue";
                 btn.disabled = true;
 
-                // API uyg'onishini kutish uchun 60 soniya vaqt beramiz
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -63,23 +77,29 @@ def read_root():
                     const data = await response.json();
                     
                     if (response.ok) {
-                        msg.textContent = "Muvaffaqiyatli kirdingiz!";
-                        msg.style.color = "green";
+                        msg.textContent = "";
+                        // Kirish oynasini yashirib, Dashboardni ko'rsatamiz
+                        document.getElementById('loginPage').style.display = 'none';
+                        document.getElementById('dashboard').style.display = 'block';
                     } else {
                         msg.textContent = data.detail || "Xatolik yuz berdi";
                         msg.style.color = "red";
                     }
                 } catch (error) {
                     clearTimeout(timeoutId);
-                    if (error.name === 'AbortError') {
-                        msg.textContent = "Server javob bermadi (vaqt tugadi)";
-                    } else {
-                        msg.textContent = "Serverga ulanib bo'lmadi";
-                    }
+                    msg.textContent = "Serverga ulanib bo'lmadi";
                     msg.style.color = "red";
                 } finally {
                     btn.disabled = false;
                 }
+            }
+
+            function logout() {
+                // Dashboardni yashirib, Kirish oynasini qaytaramiz
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('loginPage').style.display = 'block';
+                document.getElementById('phone').value = '';
+                document.getElementById('password').value = '';
             }
         </script>
     </body>
