@@ -1,95 +1,68 @@
-import flet as ft
-import flet.fastapi as flet_fastapi
-import httpx
-import os
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+import os
 
-# API manzilimiz
-API_URL = "https://buxgalteriya-api.onrender.com"
-
-def main(page: ft.Page):
-    page.title = "Buxgalteriya Ilovasi"
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-
-    # Kirish maydonlari
-    phone_input = ft.TextField(label="Telefon raqam", hint_text="+998901234567", width=300)
-    password_input = ft.TextField(label="Parol", password=True, can_reveal_password=True, width=300)
-    
-    # Xabar (agar xato bo'lsa)
-    message_text = ft.Text(value="", color=ft.colors.RED)
-
-    def login_clicked(e):
-        page.splash = ft.ProgressBar()
-        page.update()
-        
-        try:
-            # API ga so'rov yuborish
-            response = httpx.post(
-                f"{API_URL}/auth/login",
-                json={"phone": phone_input.value, "password": password_input.value},
-                timeout=20.0
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                message_text.value = "Tizimga muvaffaqiyatli kirdingiz!"
-                message_text.color = ft.colors.GREEN
-                # Bu yerda keyinchalik asosiy sahifaga o'tish kodi yoziladi
-            else:
-                detail = response.json().get("detail", "Xatolik yuz berdi")
-                message_text.value = detail
-                message_text.color = ft.colors.RED
-                
-        except Exception as ex:
-            message_text.value = f"Serverga ulanib bo'lmadi: {ex}"
-            message_text.color = ft.colors.RED
-            
-        page.splash = None
-        page.update()
-
-    login_button = ft.ElevatedButton(text="Kirish", on_click=login_clicked, width=300)
-
-    # Ro'yxatdan o'tishga o'tish tugmasi
-    register_button = ft.TextButton(
-        text="Akkountingiz yo'qmi? Ro'yxatdan o'tish",
-        on_click=lambda _: page.go("/register")
-    )
-
-    # Oynaga joylash
-    page.add(
-        ft.Column(
-            [
-                ft.Icon(ft.icons.ACCOUNT_CIRCLE, size=80, color=ft.colors.BLUE),
-                ft.Text("Tizimga kirish", size=24, weight=ft.FontWeight.BOLD),
-                ft.Container(height=20),
-                phone_input,
-                password_input,
-                message_text,
-                ft.Container(height=10),
-                login_button,
-                register_button
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER
-        )
-    )
-
-# ==========================================
-# FASTAPI VA FLET INTEGRATSIYASI
-# ==========================================
-
-# FastAPI ilovasini yaratamiz
 app = FastAPI()
 
-# Flet'ni FastAPI ga ulaymiz (Bu xatolarni oldini oladi)
-app.mount("/web", flet_fastapi.app(main), name="web")
-
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"message": "Ilova ishlayapti. Iltimos /web manziliga o'ting."}
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Buxgalteriya Ilovasi</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
+            .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+            input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+            button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+            button:hover { background-color: #0056b3; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Tizimga kirish</h2>
+            <input type="text" id="phone" placeholder="Telefon raqam (+998...)">
+            <input type="password" id="password" placeholder="Parol">
+            <button onclick="login()">Kirish</button>
+            <p id="message" style="color: red;"></p>
+        </div>
+        <script>
+            async function login() {
+                const phone = document.getElementById('phone').value;
+                const password = document.getElementById('password').value;
+                const msg = document.getElementById('message');
+                msg.textContent = "Kutilmoqda...";
+                msg.style.color = "blue";
 
-# Render uchun portni aniqlash va serverni ishga tushirish
+                try {
+                    const response = await fetch('https://buxgalteriya-api.onrender.com/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: phone, password: password })
+                    });
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        msg.textContent = "Muvaffaqiyatli kirdingiz!";
+                        msg.style.color = "green";
+                        // Keyingi sahifaga o'tish kodi keyin qo'shiladi
+                    } else {
+                        msg.textContent = data.detail || "Xatolik yuz berdi";
+                        msg.style.color = "red";
+                    }
+                } catch (error) {
+                    msg.textContent = "Serverga ulanib bo'lmadi";
+                    msg.style.color = "red";
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8550))
