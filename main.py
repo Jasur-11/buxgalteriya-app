@@ -19,6 +19,7 @@ def read_root():
             input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
             button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
             button:hover { background-color: #0056b3; }
+            button:disabled { background-color: #cccccc; cursor: not-allowed; }
         </style>
     </head>
     <body>
@@ -26,7 +27,7 @@ def read_root():
             <h2>Tizimga kirish</h2>
             <input type="text" id="phone" placeholder="Telefon raqam (+998...)">
             <input type="password" id="password" placeholder="Parol">
-            <button onclick="login()">Kirish</button>
+            <button id="loginBtn" onclick="login()">Kirish</button>
             <p id="message" style="color: red;"></p>
         </div>
         <script>
@@ -34,28 +35,50 @@ def read_root():
                 const phone = document.getElementById('phone').value;
                 const password = document.getElementById('password').value;
                 const msg = document.getElementById('message');
-                msg.textContent = "Kutilmoqda...";
+                const btn = document.getElementById('loginBtn');
+                
+                if (!phone || !password) {
+                    msg.textContent = "Iltimos, barcha maydonlarni to'ldiring";
+                    msg.style.color = "red";
+                    return;
+                }
+
+                msg.textContent = "Kutilmoqda... (Server uyg'onishi 50 soniya olishi mumkin)";
                 msg.style.color = "blue";
+                btn.disabled = true;
+
+                // API uyg'onishini kutish uchun 60 soniya vaqt beramiz
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
 
                 try {
                     const response = await fetch('https://buxgalteriya-api.onrender.com/auth/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: phone, password: password })
+                        body: JSON.stringify({ phone: phone, password: password }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     const data = await response.json();
                     
                     if (response.ok) {
                         msg.textContent = "Muvaffaqiyatli kirdingiz!";
                         msg.style.color = "green";
-                        // Keyingi sahifaga o'tish kodi keyin qo'shiladi
                     } else {
                         msg.textContent = data.detail || "Xatolik yuz berdi";
                         msg.style.color = "red";
                     }
                 } catch (error) {
-                    msg.textContent = "Serverga ulanib bo'lmadi";
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        msg.textContent = "Server javob bermadi (vaqt tugadi)";
+                    } else {
+                        msg.textContent = "Serverga ulanib bo'lmadi";
+                    }
                     msg.style.color = "red";
+                } finally {
+                    btn.disabled = false;
                 }
             }
         </script>
