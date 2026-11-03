@@ -10,21 +10,108 @@ def read_root():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Buxgalteriya Ilovasi</title>
+        <title>Buxgalteriya Tizimi</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-            .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; width: 300px; }
-            input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-            button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-            button:hover { background-color: #0056b3; }
-            button:disabled { background-color: #cccccc; cursor: not-allowed; }
+            /* Zamonaviy shrift va fon */
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                height: 100vh; 
+                margin: 0; 
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            }
             
-            /* Dashboard uslublari */
+            /* Oq karta dizayni */
+            .container { 
+                background: white; 
+                padding: 40px; 
+                border-radius: 16px; 
+                box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+                text-align: center; 
+                width: 350px; 
+            }
+            
+            h2 {
+                color: #1e293b;
+                margin-bottom: 30px;
+                font-weight: 600;
+            }
+
+            /* Kiritish maydonlari */
+            input { 
+                width: 100%; 
+                padding: 14px; 
+                margin: 10px 0; 
+                border: 1px solid #e2e8f0; 
+                border-radius: 8px; 
+                box-sizing: border-box; 
+                font-size: 15px;
+                transition: border-color 0.3s;
+                background-color: #f8fafc;
+            }
+            input:focus {
+                border-color: #3b82f6;
+                outline: none;
+                background-color: white;
+            }
+            
+            /* Tugmalar */
+            button { 
+                width: 100%; 
+                padding: 14px; 
+                background-color: #2563eb; 
+                color: white; 
+                border: none; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                font-size: 16px; 
+                font-weight: 500;
+                transition: background-color 0.3s, transform 0.1s;
+                margin-top: 10px;
+            }
+            button:hover { 
+                background-color: #1d4ed8; 
+            }
+            button:active {
+                transform: scale(0.98);
+            }
+            button:disabled { 
+                background-color: #94a3b8; 
+                cursor: not-allowed; 
+            }
+            
+            /* Asosiy menyu tugmalari */
+            .menu-btn { 
+                background-color: white; 
+                color: #1e293b;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 12px; 
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+            .menu-btn:hover { 
+                background-color: #f8fafc; 
+                border-color: #cbd5e1;
+            }
+            
+            .logout-btn {
+                background-color: #fee2e2;
+                color: #dc2626;
+                border: 1px solid #fecaca;
+                margin-top: 20px;
+            }
+            .logout-btn:hover {
+                background-color: #fecaca;
+            }
+
             #dashboard { display: none; }
-            .menu-btn { background-color: #28a745; margin-bottom: 15px; }
-            .menu-btn:hover { background-color: #218838; }
+            #message { font-size: 14px; margin-top: 15px; font-weight: 500; }
         </style>
     </head>
     <body>
@@ -34,7 +121,7 @@ def read_root():
             <input type="text" id="phone" placeholder="Telefon raqam (+998...)">
             <input type="password" id="password" placeholder="Parol">
             <button id="loginBtn" onclick="login()">Kirish</button>
-            <p id="message" style="color: red;"></p>
+            <p id="message"></p>
         </div>
 
         <!-- Asosiy sahifa (Dashboard) -->
@@ -42,7 +129,7 @@ def read_root():
             <h2>Asosiy Menyu</h2>
             <button class="menu-btn" onclick="alert('Shartnoma yaratish sahifasi tez kunda!')">📄 Shartnoma yaratish</button>
             <button class="menu-btn" onclick="alert('Spetsifikatsiya yaratish sahifasi tez kunda!')">📊 Spetsifikatsiya yaratish</button>
-            <button style="background-color: #dc3545;" onclick="logout()">Chiqish</button>
+            <button class="logout-btn" onclick="logout()">Chiqish</button>
         </div>
 
         <script>
@@ -54,12 +141,12 @@ def read_root():
                 
                 if (!phone || !password) {
                     msg.textContent = "Iltimos, barcha maydonlarni to'ldiring";
-                    msg.style.color = "red";
+                    msg.style.color = "#dc2626";
                     return;
                 }
 
-                msg.textContent = "Kutilmoqda... (Server uyg'onishi 50 soniya olishi mumkin)";
-                msg.style.color = "blue";
+                msg.textContent = "Tekshirilmoqda... (50 soniyagacha kutish mumkin)";
+                msg.style.color = "#2563eb";
                 btn.disabled = true;
 
                 const controller = new AbortController();
@@ -78,28 +165,27 @@ def read_root():
                     
                     if (response.ok) {
                         msg.textContent = "";
-                        // Kirish oynasini yashirib, Dashboardni ko'rsatamiz
                         document.getElementById('loginPage').style.display = 'none';
                         document.getElementById('dashboard').style.display = 'block';
                     } else {
                         msg.textContent = data.detail || "Xatolik yuz berdi";
-                        msg.style.color = "red";
+                        msg.style.color = "#dc2626";
                     }
                 } catch (error) {
                     clearTimeout(timeoutId);
                     msg.textContent = "Serverga ulanib bo'lmadi";
-                    msg.style.color = "red";
+                    msg.style.color = "#dc2626";
                 } finally {
                     btn.disabled = false;
                 }
             }
 
             function logout() {
-                // Dashboardni yashirib, Kirish oynasini qaytaramiz
                 document.getElementById('dashboard').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'block';
                 document.getElementById('phone').value = '';
                 document.getElementById('password').value = '';
+                document.getElementById('message').textContent = '';
             }
         </script>
     </body>
