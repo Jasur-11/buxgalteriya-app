@@ -1,6 +1,10 @@
 import flet as ft
+import flet.fastapi as flet_fastapi
 import httpx
+import os
+from fastapi import FastAPI
 
+# API manzilimiz
 API_URL = "https://buxgalteriya-api.onrender.com"
 
 def main(page: ft.Page):
@@ -21,19 +25,19 @@ def main(page: ft.Page):
         page.update()
         
         try:
+            # API ga so'rov yuborish
             response = httpx.post(
                 f"{API_URL}/auth/login",
-                json={"phone": phone_input.value, "password": password_input.value}
+                json={"phone": phone_input.value, "password": password_input.value},
+                timeout=20.0
             )
             
             if response.status_code == 200:
-                # Muvaffaqiyatli kirish
                 data = response.json()
-                message_text.value = "Tizimga kirdingiz! (Keyingi oynalar keyin qo'shiladi)"
+                message_text.value = "Tizimga muvaffaqiyatli kirdingiz!"
                 message_text.color = ft.colors.GREEN
                 # Bu yerda keyinchalik asosiy sahifaga o'tish kodi yoziladi
             else:
-                # Xato
                 detail = response.json().get("detail", "Xatolik yuz berdi")
                 message_text.value = detail
                 message_text.color = ft.colors.RED
@@ -47,10 +51,10 @@ def main(page: ft.Page):
 
     login_button = ft.ElevatedButton(text="Kirish", on_click=login_clicked, width=300)
 
-    # Ro'yxatdan o'tishga o'tish tugmasi (hozircha faqat matn)
+    # Ro'yxatdan o'tishga o'tish tugmasi
     register_button = ft.TextButton(
         text="Akkountingiz yo'qmi? Ro'yxatdan o'tish",
-        on_click=lambda _: page.go("/register") # Keyinchalik sahifa qo'shiladi
+        on_click=lambda _: page.go("/register")
     )
 
     # Oynaga joylash
@@ -71,8 +75,22 @@ def main(page: ft.Page):
         )
     )
 
-# Ilovani ishga tushirish (Render uchun Web rejimda)
+# ==========================================
+# FASTAPI VA FLET INTEGRATSIYASI
+# ==========================================
+
+# FastAPI ilovasini yaratamiz
+app = FastAPI()
+
+# Flet'ni FastAPI ga ulaymiz (Bu xatolarni oldini oladi)
+app.mount("/web", flet_fastapi.app(main), name="web")
+
+@app.get("/")
+def read_root():
+    return {"message": "Ilova ishlayapti. Iltimos /web manziliga o'ting."}
+
+# Render uchun portni aniqlash va serverni ishga tushirish
 if __name__ == "__main__":
-    import os
+    import uvicorn
     port = int(os.environ.get("PORT", 8550))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
+    uvicorn.run(app, host="0.0.0.0", port=port)
