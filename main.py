@@ -18,14 +18,14 @@ def read_root():
             .container { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 800px; }
             h2 { color: #1e293b; margin-bottom: 30px; font-weight: 600; }
             input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #f8fafc; }
-            button { padding: 14px; background-color: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 10px; transition: 0.3s;}
+            input:focus { border-color: #3b82f6; outline: none; background-color: white; }
+            button { padding: 14px; background-color: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 10px; transition: 0.3s; width: 100%; }
             button:hover { background-color: #1d4ed8; }
             
-            /* Admin Panel uslublari */
             #dashboard { display: none; text-align: left; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
-            .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-            .tab-btn { background: #f1f5f9; color: #334155; width: auto; padding: 10px 20px; margin: 0; border-radius: 8px; border: 1px solid #e2e8f0; }
+            .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+            .tab-btn { background: #f1f5f9; color: #334155; width: auto; padding: 10px 20px; margin: 0; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; }
             .tab-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
             
             .card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -39,7 +39,6 @@ def read_root():
         </style>
     </head>
     <body>
-        <!-- Kirish oynasi -->
         <div class="container" id="loginPage">
             <h2>👨‍💼 Admin Panel</h2>
             <input type="text" id="phone" placeholder="Admin telefoni (+998...)">
@@ -48,7 +47,6 @@ def read_root():
             <p id="message" style="color: #dc2626; font-size: 14px;"></p>
         </div>
 
-        <!-- Asosiy Admin sahifasi -->
         <div class="container" id="dashboard">
             <div class="header">
                 <h2>Admin Panel</h2>
@@ -58,6 +56,7 @@ def read_root():
             <div class="tabs">
                 <button class="tab-btn active" id="tabUsers" onclick="switchTab('users')">👥 Foydalanuvchilar</button>
                 <button class="tab-btn" id="tabContracts" onclick="switchTab('contracts')">📄 Shartnomalar</button>
+                <button class="tab-btn" id="tabSpeks" onclick="switchTab('speks')">📊 Spetsifikatsiyalar</button>
             </div>
             
             <div id="contentList">
@@ -106,7 +105,11 @@ def read_root():
                 currentTab = tab;
                 document.getElementById('tabUsers').className = tab === 'users' ? 'tab-btn active' : 'tab-btn';
                 document.getElementById('tabContracts').className = tab === 'contracts' ? 'tab-btn active' : 'tab-btn';
-                if (tab === 'users') loadUsers(); else loadContracts();
+                document.getElementById('tabSpeks').className = tab === 'speks' ? 'tab-btn active' : 'tab-btn';
+                
+                if (tab === 'users') loadUsers(); 
+                else if (tab === 'contracts') loadContracts();
+                else if (tab === 'speks') loadSpeks();
             }
 
             async function loadUsers() {
@@ -168,6 +171,50 @@ def read_root():
                     }
                     list.innerHTML = html;
                 } catch (error) { list.innerHTML = `<p style="color: red; text-align: center;">Xatolik yuz berdi</p>`; }
+            }
+
+            async function loadSpeks() {
+                const list = document.getElementById('contentList');
+                list.innerHTML = `<p style="text-align: center; color: #64748b;">Yuklanmoqda...</p>`;
+                try {
+                    const response = await fetch('https://buxgalteriya-api.onrender.com/speks/list', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (!response.ok) throw new Error(`HTTP xato: ${response.status}`);
+                    
+                    const speks = await response.json();
+                    
+                    if (speks.length === 0) { list.innerHTML = `<p style="text-align: center;">Spetsifikatsiyalar yo'q</p>`; return; }
+
+                    let html = "";
+                    for (let s of speks) {
+                        let itemsList = "";
+                        try {
+                            let items = JSON.parse(s.items);
+                            items.forEach(item => {
+                                itemsList += `<li>${item.name} - ${item.qty} x ${item.price} = ${item.total} so'm</li>`;
+                            });
+                        } catch(e) { itemsList = "Ma'lumot xato"; }
+
+                        html += `
+                            <div class="card">
+                                <div>
+                                    <h4 style="margin: 0 0 5px 0;">Spetsifikatsiya № ${s.number} (${s.company.toUpperCase()})</h4>
+                                    <small style="color: #64748b;">Agent: ${s.user_name} | Sana: ${s.created_at}</small>
+                                    <ul style="font-size: 14px; margin-top: 10px; color: #334155;">
+                                        ${itemsList}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <span class="status status-approved">Jami: ${s.total.toLocaleString()} so'm</span>
+                                </div>
+                            </div>`;
+                    }
+                    list.innerHTML = html;
+                } catch (error) { 
+                    console.error(error);
+                    list.innerHTML = `<p style="color: red; text-align: center;">Xatolik yuz berdi: ${error.message}</p>`; 
+                }
             }
 
             async function changeUserStatus(userId, action) {
